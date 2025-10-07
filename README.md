@@ -5,6 +5,13 @@ When run, the script produces a ZIP file for each supported game save found in t
 
 In most cases the files in the ZIP can be copied to the save directory of the Steam/Epic version of the game. To find out the save file location, check [PCGamingWiki](https://www.pcgamingwiki.com/).
 
+## 🎮 Abiotic Factor Support
+
+**Special support for Abiotic Factor** with Xbox → Steam conversion! See **[ABIOTIC_FACTOR_GUIDE.md](ABIOTIC_FACTOR_GUIDE.md)** for:
+- Extracting Xbox Game Pass saves (bundled archive format)
+- Converting to Steam dedicated server format
+- Complete 2-step workflow with auto-detection
+
 > [!IMPORTANT]
 > If you want the script to support another game, please open an issue [here](https://github.com/Z1ni/XGP-save-extractor/issues/new/choose).
 >
@@ -17,6 +24,7 @@ Legend: ✅ Confirmed working, ❔ Unconfirmed, - Not available in the store
 
 | Game | Tested w/ Steam | Tested w/ Epic |
 |-|-|-|
+| **Abiotic Factor** | ✅ | - |
 | Arcade Paradise | ✅ | ✅ |
 | Atomic Heart | ✅ | - |
 | The Callisto Protocol | ✅ | - |

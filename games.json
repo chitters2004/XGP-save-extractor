@@ -266,7 +266,7 @@
         },
         // Abiotic Factor
         // Requires: oo2core_9_win64.dll (included)
-        // NOTE: Extracts RAW Xbox saves only. For Steam conversion, see README_ABIOTIC_FACTOR.md
+        // NOTE: Extracts RAW Xbox saves only. For Steam conversion, see ABIOTIC_FACTOR_GUIDE.md
         {
             "name": "Abiotic Factor",
             "package": "PlayStack.AbioticFactor_3wcqaesafpzfy",
