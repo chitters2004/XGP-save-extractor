@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
 """
-ABIOTIC FACTOR: XBOX → STEAM CONVERTER (Fork Version)
+ABIOTIC FACTOR: XBOX → STEAM DEDICATED SERVER CONVERTER
 
-This converter works with extracted saves from main.py and converts them to Steam format.
+Converts Xbox Game Pass saves to Steam Dedicated Server format.
+
+IMPORTANT: This converter is specifically designed for STEAM DEDICATED SERVERS ONLY.
+           Converted saves will NOT work in Steam singleplayer or co-op sessions.
 
 Usage:
-    # Auto-detect latest extraction
-    python convert_to_steam.py --template "path/to/steam/save"
+    # Auto-detect latest extraction and template
+    python convert_to_steam.py
 
     # Specify extraction ZIP
-    python convert_to_steam.py --input "abiotic_factor_xxx.zip" --template "path/to/steam/save"
+    python convert_to_steam.py --input "abiotic_factor_xxx.zip" --template "path/to/server/save"
 
     # Specify extracted folder
-    python convert_to_steam.py --input "extracted/WorldName" --template "path/to/steam/save"
+    python convert_to_steam.py --input "extracted/WorldName" --template "path/to/server/save"
 
 Requirements:
 - uesave-rs: cargo install --git https://github.com/trumank/uesave-rs --branch patch-abiotic-factor
-- Working Steam save as template (from Steam dedicated server or Steam game)
+- Working Steam dedicated server save as template
 
 Template Locations (Auto-Checked):
 - Steam Dedicated Server: {SteamApps}/common/AbioticFactorDedicatedServer/Saved/SaveGames/Server/Worlds/{WorldName}/
-- Steam Game: {UserProfile}/AppData/LocalLow/Deep Field Games/Abiotic Factor/Saved/SaveGames/{SteamID}/
+- Custom Server Locations: F:/Games/Servers/AbioticFactor/..., D:/Games/Servers/AbioticFactor/...
+
+Note: Singleplayer Steam saves are NOT used as templates and are incompatible.
 """
 
 import os

@@ -1,6 +1,10 @@
 # Abiotic Factor Save Extraction & Conversion
 
-Complete guide for extracting and converting Abiotic Factor saves from Xbox Game Pass to Steam.
+Complete guide for extracting and converting Abiotic Factor saves from Xbox Game Pass to **Steam Dedicated Server**.
+
+> **⚠️ IMPORTANT:** This converter is specifically designed for **Steam Dedicated Server** saves.
+> It does NOT support converting saves for Steam singleplayer/co-op mode.
+> The converted saves will only work on a Steam dedicated server.
 
 ## Quick Start (2-Step Process)
 
@@ -21,14 +25,15 @@ WorldName/
       └── Player_*.sav (2 files)
 ```
 
-### Step 2: Convert to Steam (REQUIRED)
+### Step 2: Convert to Steam Dedicated Server (REQUIRED)
 
-**You MUST have a working Steam save as a template first!**
+**You MUST have a working Steam dedicated server save as a template first!**
 
 Get a template by:
-1. Start Abiotic Factor on Steam (or dedicated server)
-2. Create a new save (play for a few seconds)
-3. Exit the game
+1. Start your Abiotic Factor dedicated server
+2. Let it create a new world (or load an existing one)
+3. Stop the server
+4. The template save will be in `{ServerRoot}/Saved/SaveGames/Server/Worlds/{WorldName}/`
 
 Then convert:
 ```bash
@@ -36,10 +41,10 @@ Then convert:
 python convert_to_steam.py
 
 # Or specify paths
-python convert_to_steam.py --input "abiotic_factor_xxx.zip" --template "path/to/steam/save"
+python convert_to_steam.py --input "abiotic_factor_xxx.zip" --template "path/to/server/save"
 ```
 
-Output: `converted_saves/WorldName/` ready for Steam!
+Output: `converted_saves/WorldName/` ready for your dedicated server!
 
 ## Requirements
 
@@ -58,11 +63,14 @@ Output: `converted_saves/WorldName/` ready for Steam!
 
 ## Template Auto-Detection
 
-The converter automatically searches these locations:
-- **Dedicated Server:** `{SteamApps}/common/AbioticFactorDedicatedServer/Saved/SaveGames/Server/Worlds/`
-- **Steam Game:** `{UserProfile}/AppData/LocalLow/Deep Field Games/Abiotic Factor/Saved/SaveGames/`
+The converter automatically searches common dedicated server locations:
+- `{SteamApps}/common/AbioticFactorDedicatedServer/Saved/SaveGames/Server/Worlds/`
+- `F:/Games/Servers/AbioticFactor/Saved/SaveGames/Server/Worlds/`
+- `D:/Games/Servers/AbioticFactor/Saved/SaveGames/Server/Worlds/`
 
 If found, you don't need to specify `--template`!
+
+> **Note:** The converter does NOT auto-detect singleplayer Steam game saves, as those are incompatible with dedicated servers.
 
 ## Conversion Process (What It Does)
 
@@ -77,7 +85,7 @@ The converter automatically:
 ## Troubleshooting
 
 **Q: "No Steam save template found!"**
-A: You need a working Steam save first. Launch Abiotic Factor on Steam, create a save, then try again.
+A: You need a working Steam **dedicated server** save first. Start your dedicated server, let it create a world, then stop it and try again.
 
 **Q: "uesave failed. Is it installed?"**
 A: You need to install Rust first, then uesave-rs:
@@ -101,20 +109,20 @@ A: The DLL should be included. Make sure it's in the same folder as main.py.
 A: Try running the extractor again. Xbox cloud sync can sometimes cause temporary issues.
 
 **Q: Where do I put the converted saves?**
-A:
-- **Dedicated Server:** Copy `WorldName` folder to `{ServerRoot}/Saved/SaveGames/Server/Worlds/`
-- **Steam Game:** Copy to `{UserProfile}/AppData/LocalLow/Deep Field Games/Abiotic Factor/Saved/SaveGames/{SteamID}/`
+A: Copy the `WorldName` folder to your dedicated server's `{ServerRoot}/Saved/SaveGames/Server/Worlds/` directory, then restart the server.
+
+**Q: Can I use these converted saves in Steam singleplayer/co-op mode?**
+A: **No.** These saves are specifically formatted for dedicated servers and will not work in singleplayer or non-dedicated co-op sessions.
 
 ## File Locations
 
 **Xbox Saves:**
 `%LOCALAPPDATA%\Packages\PlayStack.AbioticFactor_3wcqaesafpzfy\SystemAppData\wgs\{UserID}_{TitleID}\`
 
-**Steam Dedicated Server:**
+**Steam Dedicated Server Saves:**
 `{ServerRoot}\Saved\SaveGames\Server\Worlds\{WorldName}\`
 
-**Steam Game Saves:**
-`%UserProfile%\AppData\LocalLow\Deep Field Games\Abiotic Factor\Saved\SaveGames\{SteamID}\`
+> **Note:** Steam singleplayer saves (`%UserProfile%\AppData\LocalLow\Deep Field Games\Abiotic Factor\Saved\SaveGames\{SteamID}\`) use a different format and are NOT compatible with this converter.
 
 ## For Developers
 
