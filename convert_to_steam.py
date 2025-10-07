@@ -158,6 +158,11 @@ class AbioticConverter:
             with open(metadata_template, 'rb') as f:
                 data = f.read()
 
+            # Validate GVAS magic number
+            if data[:4] != b'GVAS':
+                self.log("Template is not a valid GVAS save file", "ERROR")
+                return None, None, None
+
             # Find where properties start
             prop_offset = data.find(b'MinutesPassed')
             if prop_offset == -1:
@@ -169,16 +174,35 @@ class AbioticConverter:
             header_end = prop_offset - 4  # 4 bytes before property name
             gvas_header = data[:header_end]
 
-            # Get save_game_type from templates using uesave
-            result = subprocess.run(['uesave', 'to-json', '-i', str(world_template)],
-                                  capture_output=True, text=True, check=True)
-            world_data = json.loads(result.stdout)
-            world_type = world_data['root']['save_game_type']
+            # Validate minimum header size
+            if len(gvas_header) < 100:
+                self.log(f"Extracted header too small ({len(gvas_header)} bytes)", "ERROR")
+                return None, None, None
 
-            result = subprocess.run(['uesave', 'to-json', '-i', str(player_template)],
-                                  capture_output=True, text=True, check=True)
-            player_data = json.loads(result.stdout)
-            player_type = player_data['root']['save_game_type']
+            # Get save_game_type from templates using uesave
+            try:
+                result = subprocess.run(['uesave', 'to-json', '-i', str(world_template)],
+                                      capture_output=True, text=True, check=True)
+                world_data = json.loads(result.stdout)
+                world_type = world_data['root']['save_game_type']
+            except subprocess.CalledProcessError as e:
+                self.log(f"uesave failed for world template: {e.stderr}", "ERROR")
+                return None, None, None
+            except (json.JSONDecodeError, KeyError) as e:
+                self.log(f"Invalid world template data: {e}", "ERROR")
+                return None, None, None
+
+            try:
+                result = subprocess.run(['uesave', 'to-json', '-i', str(player_template)],
+                                      capture_output=True, text=True, check=True)
+                player_data = json.loads(result.stdout)
+                player_type = player_data['root']['save_game_type']
+            except subprocess.CalledProcessError as e:
+                self.log(f"uesave failed for player template: {e.stderr}", "ERROR")
+                return None, None, None
+            except (json.JSONDecodeError, KeyError) as e:
+                self.log(f"Invalid player template data: {e}", "ERROR")
+                return None, None, None
 
             self.log(f"Extracted {len(gvas_header)} byte GVAS header", "SUCCESS")
             self.log(f"World type: {world_type.split('.')[-1]}")
@@ -254,19 +278,40 @@ class AbioticConverter:
 
     def _fix_save_type(self, save_path: Path, correct_type: str):
         """Fix save_game_type for a single file"""
-        result = subprocess.run(['uesave', 'to-json', '-i', str(save_path)],
-                              capture_output=True, text=True, check=True)
-        data = json.loads(result.stdout)
+        try:
+            result = subprocess.run(['uesave', 'to-json', '-i', str(save_path)],
+                                  capture_output=True, text=True, check=True)
+            data = json.loads(result.stdout)
+        except subprocess.CalledProcessError as e:
+            self.log(f"uesave to-json failed for {save_path.name}: {e.stderr}", "ERROR")
+            raise
+        except json.JSONDecodeError as e:
+            self.log(f"Invalid JSON from uesave for {save_path.name}: {e}", "ERROR")
+            raise
+
+        if 'root' not in data or 'save_game_type' not in data['root']:
+            self.log(f"Invalid save structure in {save_path.name}", "ERROR")
+            raise ValueError("Invalid save file structure")
+
         data['root']['save_game_type'] = correct_type
 
         json_path = save_path.with_suffix('.json')
-        with open(json_path, 'w') as f:
-            json.dump(data, f)
+        try:
+            with open(json_path, 'w') as f:
+                json.dump(data, f, indent=2)
 
-        save_path.unlink()
-        subprocess.run(['uesave', 'from-json', '-i', str(json_path), '-o', str(save_path)],
-                     capture_output=True, check=True)
-        json_path.unlink()
+            save_path.unlink()
+            subprocess.run(['uesave', 'from-json', '-i', str(json_path), '-o', str(save_path)],
+                         capture_output=True, text=True, check=True)
+        except subprocess.CalledProcessError as e:
+            self.log(f"uesave from-json failed for {save_path.name}: {e.stderr}", "ERROR")
+            raise
+        except IOError as e:
+            self.log(f"Failed to write JSON for {save_path.name}: {e}", "ERROR")
+            raise
+        finally:
+            if json_path.exists():
+                json_path.unlink()
 
     def fix_metadata(self) -> bool:
         """Remove compression flag from MetaData"""
@@ -281,20 +326,36 @@ class AbioticConverter:
             result = subprocess.run(['uesave', 'to-json', '-i', str(metadata_path)],
                                   capture_output=True, text=True, check=True)
             data = json.loads(result.stdout)
+        except subprocess.CalledProcessError as e:
+            self.log(f"uesave to-json failed for MetaData: {e.stderr}", "ERROR")
+            return False
+        except json.JSONDecodeError as e:
+            self.log(f"Invalid JSON from uesave for MetaData: {e}", "ERROR")
+            return False
 
+        try:
             if 'bHasBeenCompressed_0' in data['root']['properties']:
                 del data['root']['properties']['bHasBeenCompressed_0']
 
                 json_path = metadata_path.with_suffix('.json')
-                with open(json_path, 'w') as f:
-                    json.dump(data, f)
+                try:
+                    with open(json_path, 'w') as f:
+                        json.dump(data, f, indent=2)
 
-                metadata_path.unlink()
-                subprocess.run(['uesave', 'from-json', '-i', str(json_path), '-o', str(metadata_path)],
-                             capture_output=True, check=True)
-                json_path.unlink()
+                    metadata_path.unlink()
+                    subprocess.run(['uesave', 'from-json', '-i', str(json_path), '-o', str(metadata_path)],
+                                 capture_output=True, text=True, check=True)
 
-                self.log("Removed compression flag", "SUCCESS")
+                    self.log("Removed compression flag", "SUCCESS")
+                except subprocess.CalledProcessError as e:
+                    self.log(f"uesave from-json failed for MetaData: {e.stderr}", "ERROR")
+                    return False
+                except IOError as e:
+                    self.log(f"Failed to write JSON for MetaData: {e}", "ERROR")
+                    return False
+                finally:
+                    if json_path.exists():
+                        json_path.unlink()
             else:
                 self.log("No compression flag found", "INFO")
 
@@ -313,21 +374,38 @@ class AbioticConverter:
 
         try:
             for save_path in player_saves:
-                result = subprocess.run(['uesave', 'to-json', '-i', str(save_path)],
-                                      capture_output=True, text=True, check=True)
-                data = json.loads(result.stdout)
+                try:
+                    result = subprocess.run(['uesave', 'to-json', '-i', str(save_path)],
+                                          capture_output=True, text=True, check=True)
+                    data = json.loads(result.stdout)
+                except subprocess.CalledProcessError as e:
+                    self.log(f"uesave to-json failed for {save_path.name}: {e.stderr}", "ERROR")
+                    return False
+                except json.JSONDecodeError as e:
+                    self.log(f"Invalid JSON from uesave for {save_path.name}: {e}", "ERROR")
+                    return False
 
-                if data['root']['af_data']['variant'] != 'None':
-                    data['root']['af_data']['variant'] = 'None'
+                if 'root' in data and 'af_data' in data['root']:
+                    if data['root']['af_data']['variant'] != 'None':
+                        data['root']['af_data']['variant'] = 'None'
 
-                    json_path = save_path.with_suffix('.json')
-                    with open(json_path, 'w') as f:
-                        json.dump(data, f)
+                        json_path = save_path.with_suffix('.json')
+                        try:
+                            with open(json_path, 'w') as f:
+                                json.dump(data, f, indent=2)
 
-                    save_path.unlink()
-                    subprocess.run(['uesave', 'from-json', '-i', str(json_path), '-o', str(save_path)],
-                                 capture_output=True, check=True)
-                    json_path.unlink()
+                            save_path.unlink()
+                            subprocess.run(['uesave', 'from-json', '-i', str(json_path), '-o', str(save_path)],
+                                         capture_output=True, text=True, check=True)
+                        except subprocess.CalledProcessError as e:
+                            self.log(f"uesave from-json failed for {save_path.name}: {e.stderr}", "ERROR")
+                            return False
+                        except IOError as e:
+                            self.log(f"Failed to write JSON for {save_path.name}: {e}", "ERROR")
+                            return False
+                        finally:
+                            if json_path.exists():
+                                json_path.unlink()
 
             self.log(f"Fixed {len(player_saves)} player saves", "SUCCESS")
             return True

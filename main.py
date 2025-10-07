@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -633,17 +634,20 @@ def get_save_paths(
         extracted_files = list(extract_temp.glob("*.sav"))
 
         for save_file in extracted_files:
-            # Determine output path based on file type
-            if "Player_" in save_file.name:
-                output_path = player_temp / save_file.name
-            elif save_file.name == "SandboxSettings.ini.sav":
-                output_path = world_temp / "SandboxSettings.ini"
-            else:
-                output_path = world_temp / save_file.name
+            try:
+                # Determine output path based on file type
+                if "Player_" in save_file.name:
+                    output_path = player_temp / save_file.name
+                elif save_file.name == "SandboxSettings.ini.sav":
+                    output_path = world_temp / "SandboxSettings.ini"
+                else:
+                    output_path = world_temp / save_file.name
 
-            # Copy to organized location
-            import shutil
-            shutil.copy(save_file, output_path)
+                # Copy to organized location
+                shutil.copy(save_file, output_path)
+            except (IOError, OSError) as e:
+                print(f"  ERROR: Failed to copy {save_file.name}: {e}")
+                raise
 
         # Add all files to save_meta for ZIP packaging
         for file_path in world_temp.rglob("*"):
