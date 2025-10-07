@@ -263,6 +263,14 @@
             "name": "Clair Obscur: Expedition 33",
             "package": "KeplerInteractive.Expedition33_ymj30pw7xe604",
             "handler": "coral-island"
+        },
+        // Abiotic Factor
+        // Requires: oo2core_9_win64.dll (included)
+        // NOTE: Extracts RAW Xbox saves only. For Steam conversion, see README_ABIOTIC_FACTOR.md
+        {
+            "name": "Abiotic Factor",
+            "package": "PlayStack.AbioticFactor_3wcqaesafpzfy",
+            "handler": "abiotic-factor"
         }
     ]
 }

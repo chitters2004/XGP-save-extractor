@@ -1,6 +1,7 @@
 import json
 import os
 import struct
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -10,6 +11,13 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePath
 from typing import Any, Dict, List, Tuple
 
+# Import Abiotic Factor extraction module
+try:
+    import extract_abf_saves
+    ABIOTIC_FACTOR_AVAILABLE = True
+except ImportError:
+    ABIOTIC_FACTOR_AVAILABLE = False
+
 # Xbox Game Pass for PC savefile extractor
 
 # Running: Just run the script with Python 3 to create ZIP files that contain the save files
@@ -18,6 +26,15 @@ from typing import Any, Dict, List, Tuple
 
 filetime_epoch = datetime(1601, 1, 1, tzinfo=timezone.utc)
 packages_root = Path(os.path.expandvars(f"%LOCALAPPDATA%\\Packages"))
+
+# Abiotic Factor constants (from v1.0, 2025-10-07)
+ABIOTIC_GVAS_HEADER_HEX = "47564153030000000a020000f40300000500040004004c420f80090000002b2b44462b41424600030000004a00000022d5549cbe4f26a846072194d082b4612c000000a35c9162f74b8e1cc7120ea3f79d21c822000000240d40cc7b4ee9e083a2f99b27e0000000e40bb2b0184fe91ec0b953a3c7050a00000000c3751e0639467eb484c87064ecefe7402800000041e8066e44f49482311d72a18e3713250000000609bd37cf80430f734c166a4d63f6c0370000000f64c4b5e0ae44bd39c2f33c2f36a6fc000000005c86c1a3e30f4974cd48ccaeda941339000000007b13f378c24be916df47a4e81cce8e1c14000000292e765da12049fcbdb27f89481c09d830000000a51ec67ba12441d86ec7b5e0f84d075a0d000000f77e3bd8b5354e10a9579852087a0002000000281cf7c26e2d8146a786e0409c540d550100000006ea736cf71047b67c0355826fa50a6a03000000dc2968d716dd4d1de2a0aa64cc8308840300000075ba7dc2264cdfc31718b75e531df71f01000000d4d4686e3ea42c05b179e0c154f0e5c60100000091fb98d664ec494d78e5a9f1dc86ad2211000000d8271baf46bb4f65e48c58cf5daf590f00000000a3e1d4e2e26349c7b5f89e6d0a042048010000004e82d5e9600947aafbb60da0e37aa91f030000006cbbce6cb60740a7e71817c7538f06310e000000d1c3e00b35e8014d8ebf5e38fdbf00230f0000004b066e89974ee02f8d67b38c72e7065a01000000f68c74dd074fab0d718799f2e87913e301000000e2d142d77024427e800aa0f72b46ee980f000000d1d30d72e940416ea4af09742eb064d001000000bafd63b02478fb72810ae6f8b49e20cd86000000bb5a48dbcb6d7f81f8cfa2d60c905b6e08000000ddbb4c5bae5b4b12e9cad67f86aeba550c000000689170e7bb2340587e994ca9bdb0f19e0d0000008806cbd99fff58014ea290d05fc1b810050000003f6b6d12f2e2bf5f6c7e29530cd5e17a01000000a3b3740f4f634d55e6a2e8c1729fd9970a000000c21ecf35ec26254a60a2c948770f79f329000000bde0b468fe6b49479873e380f3b66e1b28000000609e02b3201b1fe5a304b3e3fd26320300000060b77dae6f24fce23a18f73014bc5e07010000006d5f0da6cde13e58211ecc9fb482a71f00000000e4368a7bf9a09548f973219bbf41a77c020000008aceb4303958728f3b4efb7714cf58e901000000075b37716aa64e179c7398c83a7e62107700000000fc0da1f27e5b46f2baa5a1ff701bb8ac33000000d4cc7e89eb41fb9a0959a01884ab85e808000000c261105ec1964c77e1e1f4a4b22ebf8e12000000e1b03a9227624ec5aa7e21e0dd059e9c13000000bd86ff9d494fe201a28812c3a86f77060a000000ac07a1f2aff63e161df39c1742fc3a68010000000b1f742f93174c1009a1cf0c7b09e0f70a00000028f94c35e63a410f8c8d9fcf91f5b55100000027dda3c235f80bc1834c3b1699d37d0e000000a27e74a4e8cda82e0a498d9c60186c4007000000dc087e80952b49bd8b415a81e3fa4f6b05000000eb3fb52e54956a754ae4b59ac4dbb0b805000000f9e510fb4ec9118f1e368f5ab4f9edc301000000e7ac61a10c49fb5ec91dcea3ce76025e320000002edd750a0341bdb96fc66a11f28c16a701000000d0e37afe57b3c14c86990f55f5fcf85658000000040d3e26f0a363e66c044e38e5d7adb20000000081ddae93be1aea4775b7097b3a7df9c609000000ac0b5e2ce69a11117c4bab11a5415411000000bbe11ce2b67ef90020d1c97428b30f5d00000000301dbe5d725f03a39ea4bfd5b3852f6503000000798d5ddc4169460e9c4e56f3fc8fb73909000000bf5c7aa7ea0f5c28b46482cf5d9dbe371e000000b86af06e8e63c2a4047ef6ed463818120000000047567f7d6fec71488c9a23b6e9fb63e503000000fc90f9f8fbe3a0a3c8f1af83802074c204000000dc8e427ea4bd7e0e68490f8fa4eefd1a05000000d0486ff81ed1c2119dfa76f0fa5d2e4a01000000db0379fb5b53dd88e8dbfe9e82403d7502000000e066c19a4f40ffe82127a3ba96bd5f5502000000dcc0f2fc30afdb16e1ae98fcec06570756000000e41b046304a36a9e05005df874d5ed6600000007a0a7e8cb0f1bfb85ef3b8f7fe8594a080000000070caee97d9a8524d9afa6f2e5f00de0005000000ca5ff16dc09c4e4f5f84feead2e1b6e900000000a05d9531a00a5a02add60b96c9ab8fc303000000d2a99adc64534f01b6de0dc02fb96b7009000000bec1a7a0ea072ec8305d9f5ca8c1cd501e000000f6df23f6aa7bbb494e18fff68d6df04702000000b0dd6b2a7f0f4708980f28f996564bf805000000fa14f82d3e99e5c40f5b3f99f1e43e5f01000000c3bb3624e74620051bb6ed50b6e51e7505000000e03c385f91104d14b66e817f6016a95101000000d23dbb22759eaf91023ba8dd52ab2f76020000008a76cf5c99c34e19b3691f71c1d40cfc550000004d021e63f77c3d4e0a0508e41ebe76000000000021c44a72fa8ea27b4be5d1db12e50aa003000000a6eec5db7c30f22f64dfb4cdd60a090600000000"
+ABIOTIC_GVAS_HEADER = bytes.fromhex(ABIOTIC_GVAS_HEADER_HEX)
+ABIOTIC_SAVE_TYPES = {
+    "metadata": "/Game/Blueprints/Saves/Abiotic_WorldMetadataSave.Abiotic_WorldMetadataSave_C",
+    "world": "/Game/Blueprints/Saves/Abiotic_WorldSave.Abiotic_WorldSave_C",
+    "player": "/Game/Blueprints/Saves/Abiotic_CharacterSave.Abiotic_CharacterSave_C",
+}
 
 
 def read_game_list() -> Dict[str, Any] | None:
@@ -249,6 +266,87 @@ def read_user_containers(user_wgs_dir: Path) -> Tuple[str, List[Dict[str, Any]]]
     return (store_pkg_name, containers)
 
 
+def _fix_abiotic_save_type(save_path: Path, correct_type: str):
+    """Fix save_game_type for an Abiotic Factor save file"""
+    try:
+        result = subprocess.run(
+            ["uesave", "to-json", "-i", str(save_path)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"  ERROR: uesave failed on {save_path.name}")
+        print(f"  stdout: {e.stdout}")
+        print(f"  stderr: {e.stderr}")
+        raise
+
+    data = json.loads(result.stdout)
+    data["root"]["save_game_type"] = correct_type
+
+    json_path = save_path.with_suffix(".json")
+    with open(json_path, "w") as f:
+        json.dump(data, f)
+
+    save_path.unlink()
+    subprocess.run(
+        ["uesave", "from-json", "-i", str(json_path), "-o", str(save_path)],
+        capture_output=True,
+        check=True,
+    )
+    json_path.unlink()
+
+
+def _remove_abiotic_compression_flag(save_path: Path):
+    """Remove bHasBeenCompressed_0 from Abiotic Factor MetaData save"""
+    result = subprocess.run(
+        ["uesave", "to-json", "-i", str(save_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    data = json.loads(result.stdout)
+
+    if "bHasBeenCompressed_0" in data["root"]["properties"]:
+        del data["root"]["properties"]["bHasBeenCompressed_0"]
+
+        json_path = save_path.with_suffix(".json")
+        with open(json_path, "w") as f:
+            json.dump(data, f)
+
+        save_path.unlink()
+        subprocess.run(
+            ["uesave", "from-json", "-i", str(json_path), "-o", str(save_path)],
+            capture_output=True,
+            check=True,
+        )
+        json_path.unlink()
+
+
+def _fix_abiotic_player_af_data(save_path: Path):
+    """Fix player af_data variant for Abiotic Factor"""
+    result = subprocess.run(
+        ["uesave", "to-json", "-i", str(save_path)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    data = json.loads(result.stdout)
+    data["root"]["af_data"]["variant"] = "None"
+
+    json_path = save_path.with_suffix(".json")
+    with open(json_path, "w") as f:
+        json.dump(data, f)
+
+    save_path.unlink()
+    subprocess.run(
+        ["uesave", "from-json", "-i", str(json_path), "-o", str(save_path)],
+        capture_output=True,
+        check=True,
+    )
+    json_path.unlink()
+
+
 def get_save_paths(
     supported_games: Dict[str, Any],
     store_pkg_name: str,
@@ -477,6 +575,82 @@ def get_save_paths(
                 fname = f"Backup/{fname.removeprefix('Backup')}"
             fpath = container["files"][0]["path"]
             save_meta.append((fname, fpath))
+
+    elif handler_name == "abiotic-factor":
+        # Abiotic Factor - Extract raw Xbox saves from bundled archive
+        # NOTE: Extracted saves are RAW format and need conversion for Steam
+        # Use convert_to_steam.py for full Steam conversion
+
+        if not ABIOTIC_FACTOR_AVAILABLE:
+            raise Exception("Abiotic Factor extraction requires extract_abf_saves.py module")
+
+        # Check for Oodle DLL
+        oodle_dll_path = Path(__file__).parent / "oo2core_9_win64.dll"
+        if not oodle_dll_path.exists():
+            raise Exception(
+                "Abiotic Factor extraction requires oo2core_9_win64.dll\n"
+                "Place the DLL in the same directory as main.py"
+            )
+
+        # Get world name from container or handler_args
+        world_name = handler_args.get("world_name", "AbioticFactorWorld")
+        if len(containers) > 0 and containers[0]["name"]:
+            # Try to use container name as world name (e.g., "Erebus-WC" -> "Erebus")
+            container_name = containers[0]["name"]
+            world_name = container_name.split("-")[0] if "-" in container_name else container_name
+
+        # Find bundled archive
+        bundled_archive = None
+        for container in containers:
+            if len(container["files"]) > 0:
+                bundled_archive = container["files"][0]["path"]
+                break
+
+        if not bundled_archive:
+            raise Exception("No bundled archive found in Abiotic Factor save container")
+
+        # Create extraction temp dir
+        extract_temp = Path(temp_dir.name) / "abf_extract"
+        extract_temp.mkdir(exist_ok=True)
+
+        # Extract and decompress bundled archive
+        success = extract_abf_saves.extract_archive(
+            str(bundled_archive),
+            str(extract_temp),
+            str(oodle_dll_path)
+        )
+
+        if not success:
+            raise Exception("Failed to extract Abiotic Factor bundled archive")
+
+        # Create output structure in temp dir
+        world_temp = Path(temp_dir.name) / world_name
+        world_temp.mkdir(exist_ok=True)
+        player_temp = world_temp / "PlayerData"
+        player_temp.mkdir(exist_ok=True)
+
+        # Organize extracted files into proper structure
+        extracted_files = list(extract_temp.glob("*.sav"))
+
+        for save_file in extracted_files:
+            # Determine output path based on file type
+            if "Player_" in save_file.name:
+                output_path = player_temp / save_file.name
+            elif save_file.name == "SandboxSettings.ini.sav":
+                output_path = world_temp / "SandboxSettings.ini"
+            else:
+                output_path = world_temp / save_file.name
+
+            # Copy to organized location
+            import shutil
+            shutil.copy(save_file, output_path)
+
+        # Add all files to save_meta for ZIP packaging
+        for file_path in world_temp.rglob("*"):
+            if file_path.is_file():
+                # Get relative path from world folder
+                rel_path = file_path.relative_to(Path(temp_dir.name))
+                save_meta.append((str(rel_path), file_path))
 
     else:
         raise Exception('Unsupported XGP app "%s"' % store_pkg_name)
